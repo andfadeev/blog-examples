@@ -1,0 +1,57 @@
+version: '3.8'
+
+networks:
+  prometheus-monitoring-basics:
+    driver: bridge
+
+volumes:
+  prometheus_data: {}
+  grafana_data: {}
+
+services:
+  grafana:
+    image: grafana/grafana-oss
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    volumes:
+      - 'grafana_data:/var/lib/grafana'
+    networks:
+      - prometheus-monitoring-basics
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    expose:
+      - 9090
+    ports:
+      - '9090:9090'
+    networks:
+      - prometheus-monitoring-basics
+  app:
+    container_name: prometheus-monitoring-basics-app
+    build:
+      context: .
+      dockerfile: ./src/main/docker/Dockerfile.jvm
+    ports:
+      - '8080:8080'
+    networks:
+      - prometheus-monitoring-basics
+  k6:
+    image: grafana/k6:latest
+    command: run /load.js
+    volumes:
+      - ./load.js:/load.js
+    networks:
+      - prometheus-monitoring-basics
+
