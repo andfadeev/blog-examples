@@ -54,4 +54,3 @@ services:
       - ./load.js:/load.js
     networks:
       - prometheus-monitoring-basics
-
